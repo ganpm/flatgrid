@@ -32,7 +32,7 @@ pub enum Align {
 
 impl Align {
 
-    pub fn from(align: &str) -> Option<Self> {
+    pub fn from_str(align: &str) -> Option<Self> {
         match align {
             TOP    => Some(Self::VAlign(VAlign::Top)),
             BOTTOM => Some(Self::VAlign(VAlign::Bottom)),

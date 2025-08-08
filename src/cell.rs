@@ -1,4 +1,7 @@
 use crate::align::{HAlign, VAlign, Align};
+use crate::color::Color;
+use crate::style::{FontStyle, FontStyleFlag};
+use crate::format::apply_ansi_formatting;
 
 use std::fmt::Display;
 
@@ -8,6 +11,9 @@ pub struct Cell {
     data: String,
     h_align: Option<HAlign>,
     v_align: Option<VAlign>,
+    fg_color: Option<Color>,
+    bg_color: Option<Color>,
+    font_style: FontStyleFlag,
 }
 
 
@@ -20,6 +26,9 @@ impl Cell {
             data,
             h_align: None,
             v_align: None,
+            fg_color: None,
+            bg_color: None,
+            font_style: FontStyleFlag::new(),
         }
     }
 
@@ -59,7 +68,7 @@ impl Cell {
         align: &str,
     )
     {
-        match Align::from(align) {
+        match Align::from_str(align) {
             Some(Align::HAlign(h_align)) => {
                 self.h_align = Some(h_align);
             },
@@ -70,17 +79,55 @@ impl Cell {
         }
     }
 
+    pub fn set_color(
+        &mut self,
+        color: &str,
+    )
+    {
+        self.fg_color = Color::from_str(color);
+    }
+
+    pub fn set_highlight(
+        &mut self,
+        color: &str,
+    )
+    {
+        self.bg_color = Color::from_str(color);
+    }
+
+    pub fn set_style(
+        &mut self,
+        style: &str,
+    )
+    {
+        if let Some(style) = FontStyle::from_str(style) {
+            self.font_style.set(style.flag());
+        }
+    }
+
+    pub fn remove_format(
+        &mut self
+    )
+    {
+        self.h_align = None;
+        self.v_align = None;
+        self.fg_color = None;
+        self.bg_color = None;
+        self.font_style.reset();
+    }
+
     pub(crate) fn render_lines(
         &self,
         target_cell_height: usize,
         target_cell_width: usize,
     ) -> Vec<String>
     {
+        let mut visible_lens = self.data.lines()
+            .map(|line| line.len());
         let data_lines = self.data.lines()
-            .map(|line| line.to_string())
-            .collect::<Vec<String>>();
+            .map(|line| apply_ansi_formatting(line, self.fg_color, self.bg_color, self.font_style));
 
-        let height = data_lines.len();
+        let height = self.height();
     
         let v_align = self.v_align.unwrap_or_default();
 
@@ -103,7 +150,7 @@ impl Cell {
 
         // Add content lines
         for line in data_lines {
-            let visible_len = line.len();
+            let visible_len = visible_lens.next().unwrap_or(0);
             let formatted_line = if visible_len < target_cell_width {
                 let width = target_cell_width + line.len() - visible_len;
                 // Apply horizontal alignment

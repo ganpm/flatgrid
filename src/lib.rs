@@ -4,6 +4,10 @@ mod cell;
 mod grid;
 mod align;
 mod border;
+mod ansi;
+mod color;
+mod style;
+mod format;
 
 pub use cell::Cell;
 pub use grid::Grid;
