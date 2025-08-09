@@ -51,6 +51,25 @@ impl Grid {
         Grid { cells, cols: width, rows: height }
     }
 
+    pub fn set_cells<T>(
+        &mut self,
+        cells: T,
+    ) where
+        T: IntoIterator<Item = Cell>,
+    {
+        let mut iter = cells.into_iter();
+        for cell in self.cells.iter_mut() {
+            if let Some(new_cell) = iter.next() {
+                *cell = new_cell;
+            } else {
+                break;
+            }
+        }
+        if self.cells.len() < self.rows * self.cols {
+            self.cells.resize(self.rows * self.cols, Cell::default());
+        }
+    }
+
     pub fn get_cell(
         &self,
         row: usize,
@@ -135,6 +154,130 @@ impl Grid {
         self.cells.iter_mut()
             .skip(col_index)
             .step_by(self.cols)
+    }
+
+    pub fn flat_iter(
+        &self
+    ) -> impl Iterator<Item = &Cell>
+    {
+        self.cells.iter()
+    }
+
+    pub fn flat_iter_mut(
+        &mut self
+    ) -> impl Iterator<Item = &mut Cell>
+    {
+        self.cells.iter_mut()
+    }
+
+    pub fn insert_col<T>(
+        &mut self,
+        col_insert_index: usize,
+        new_column: impl IntoIterator<Item = T>,
+    )
+    where
+        T: Into<Cell>,
+    {
+        if col_insert_index > self.cols {
+            panic!("Column index out of bounds");
+        }
+
+        let mut new_column: Vec<Cell> = new_column.into_iter().map(Into::into).collect();
+
+        if new_column.len() < self.rows {
+            panic!("New column has fewer cells than the number of rows in the grid");
+        }
+        if new_column.len() > self.rows {
+            panic!("New column has more cells than the number of rows in the grid");
+        }
+
+        let old_cols = self.cols;
+        let new_cols = self.cols + 1;
+        let new_size = self.rows * new_cols;
+
+        // Resize the existing cells to make room for the new column
+        self.cells.resize(new_size, Cell::default());
+
+        for ri in (0..self.rows).rev() {
+            // Iterator for the previous column indices
+            let mut cols_iter = (0..self.cols).rev();
+            for ci in (0..new_cols).rev() {
+                if ci == col_insert_index {
+                    // Insert the new cell
+                    self.cells[ri * new_cols + ci] = new_column.pop().unwrap_or_default();
+                    if new_column.is_empty() {
+                        // We can break early here because
+                        // its guaranteed that the rest of the cells in the
+                        // current row are already in place if the new column
+                        // is empty
+                        break;
+                    }
+                } else {
+                    // Only move the iterator when we're not inserting
+                    let old_ci = cols_iter.next().unwrap();
+                    // Move the cells from the old index to the new index
+                    self.cells[ri * new_cols + ci] =
+                        std::mem::take(&mut self.cells[ri * old_cols + old_ci]);
+                }
+            }
+        }
+
+        self.cols = new_cols;
+    }
+
+    pub fn insert_row<T>(
+        &mut self,
+        row_insert_index: usize,
+        new_row: impl IntoIterator<Item = T>,
+    )
+    where
+        T: Into<Cell>,
+    {
+        if row_insert_index > self.rows {
+            panic!("Row index out of bounds");
+        }
+
+        let mut new_row: Vec<Cell> = new_row.into_iter().map(Into::into).collect();
+
+        if new_row.len() < self.cols {
+            panic!("New row has fewer cells than the number of columns in the grid");
+        }
+        if new_row.len() > self.cols {
+            panic!("New row has more cells than the number of columns in the grid");
+        }
+
+        let old_rows = self.rows;
+        let new_rows = self.rows + 1;
+        let new_size = new_rows * self.cols;
+
+        // Resize the existing cells to make room for the new row
+        self.cells.resize(new_size, Cell::default());
+
+        for ci in (0..self.cols).rev() {
+            // Iterator for the previous row indices
+            let mut rows_iter = (0..old_rows).rev();
+            for ri in (0..new_rows).rev() {
+                if ri == row_insert_index {
+                    // Insert the new cell
+                    self.cells[ri * self.cols + ci] = new_row.pop().unwrap_or_default();
+                    if new_row.is_empty() {
+                        // We can break early here because
+                        // its guaranteed that the rest of the cells in the
+                        // current column are already in place if the new row
+                        // is empty
+                        break;
+                    }
+                } else {
+                    // Only move the iterator when we're not inserting
+                    let old_ri = rows_iter.next().unwrap();
+                    // Move the cells from the old index to the new index
+                    self.cells[ri * self.cols + ci] =
+                        std::mem::take(&mut self.cells[old_ri * self.cols + ci]);
+                }
+            }
+        }
+
+        self.rows = new_rows;
     }
 
 }
