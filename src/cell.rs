@@ -14,6 +14,8 @@ pub struct Cell {
     fg_color: Option<Color>,
     bg_color: Option<Color>,
     font_style: FontStyleFlag,
+    width: Option<usize>,
+    height: Option<usize>,
 }
 
 
@@ -21,7 +23,8 @@ impl Cell {
 
     pub fn new(
         data: String
-    ) -> Self {
+    ) -> Self
+    {
         Cell {
             data,
             h_align: None,
@@ -29,6 +32,8 @@ impl Cell {
             fg_color: None,
             bg_color: None,
             font_style: FontStyleFlag::new(),
+            width: None,
+            height: None,
         }
     }
 
@@ -50,17 +55,39 @@ impl Cell {
         &self
     ) -> usize
     {
+        if let Some(height) = self.height {
+            return height;
+        }
         self.data.lines().count()
+    }
+
+    pub fn set_height(
+        &mut self,
+        height: usize
+    )
+    {
+        self.height = Some(height);
     }
 
     pub(crate) fn width(
         &self
     ) -> usize
     {
+        if let Some(width) = self.width {
+            return width;
+        }
         self.data.lines()
             .map(|line| line.len())
             .max()
             .unwrap_or(0)
+    }
+
+    pub fn set_width(
+        &mut self,
+        width: usize
+    )
+    {
+        self.width = Some(width);
     }
 
     pub fn set_align(
@@ -127,7 +154,7 @@ impl Cell {
         let data_lines = self.data.lines()
             .map(|line| apply_ansi_formatting(line, self.fg_color, self.bg_color, self.font_style));
 
-        let height = self.height();
+        let height = self.data.lines().count();
     
         let v_align = self.v_align.unwrap_or_default();
 
@@ -153,6 +180,7 @@ impl Cell {
             let visible_len = visible_lens.next().unwrap_or(0);
             let formatted_line = if visible_len < target_cell_width {
                 let width = target_cell_width + line.len() - visible_len;
+
                 // Apply horizontal alignment
                 let h_align = self.h_align.unwrap_or_default();
                 match h_align {
@@ -163,7 +191,6 @@ impl Cell {
             } else if visible_len == target_cell_width {
                 line
             } else {
-                // Most likely won't happen, but handle it gracefully
                 // Truncate the line to fit the target width
                 let truncated = &line[..target_cell_width];
                 let h_align = self.h_align.unwrap_or_default();

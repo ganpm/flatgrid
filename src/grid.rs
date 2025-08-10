@@ -18,8 +18,9 @@ impl Grid {
     pub fn new(
         rows: usize,
         cols: usize,
-    ) -> Self {
-        let cells = Vec::with_capacity(cols * rows);
+    ) -> Self
+    {
+        let cells = vec![Cell::default(); cols * rows];
         Grid { cells, cols, rows }
     }
 
@@ -54,7 +55,8 @@ impl Grid {
     pub fn set_cells<T>(
         &mut self,
         cells: T,
-    ) where
+    )
+    where
         T: IntoIterator<Item = Cell>,
     {
         let mut iter = cells.into_iter();
