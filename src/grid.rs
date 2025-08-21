@@ -72,6 +72,21 @@ impl Grid {
         }
     }
 
+    pub fn set_cell<T>(
+        &mut self,
+        row: usize,
+        col: usize,
+        cell: T,
+    )
+    where
+        T: Into<Cell>,
+    {
+        if row >= self.rows || col >= self.cols {
+            panic!("Row or column index out of bounds");
+        }
+        self.cells[row * self.cols + col] = cell.into();
+    }
+
     pub fn get_cell(
         &self,
         row: usize,
@@ -280,6 +295,78 @@ impl Grid {
         }
 
         self.rows = new_rows;
+    }
+
+    pub fn set_col<T>(
+        &mut self,
+        col_index: usize,
+        new_column: impl IntoIterator<Item = T>,
+    )
+    where
+        T: Into<Cell>,
+    {
+        if col_index >= self.cols {
+            panic!("Column index out of bounds");
+        }
+
+        let new_column: Vec<Cell> = new_column.into_iter().map(Into::into).collect();
+
+        if new_column.len() != self.rows {
+            panic!("New column has a different number of cells than the number of rows in the grid");
+        }
+
+        for (row_index, cell) in new_column.into_iter().enumerate() {
+            self.cells[row_index * self.cols + col_index] = cell;
+        }
+    }
+
+    pub fn set_row<T>(
+        &mut self,
+        row_index: usize,
+        new_row: impl IntoIterator<Item = T>,
+    )
+    where
+        T: Into<Cell>,
+    {
+        if row_index >= self.rows {
+            panic!("Row index out of bounds");
+        }
+
+        let new_row: Vec<Cell> = new_row.into_iter().map(Into::into).collect();
+
+        if new_row.len() != self.cols {
+            panic!("New row has a different number of cells than the number of columns in the grid");
+        }
+
+        for (col_index, cell) in new_row.into_iter().enumerate() {
+            self.cells[row_index * self.cols + col_index] = cell;
+        }
+    }
+
+    pub fn resize(
+        &mut self,
+        new_rows: usize,
+        new_cols: usize,
+    )
+    {
+        let old_rows = self.rows;
+        let old_cols = self.cols;
+
+        let mut new_cells = vec![Cell::default(); new_rows * new_cols];
+
+        let rows = std::cmp::min(old_rows, new_rows);
+        let cols = std::cmp::min(old_cols, new_cols);
+
+        for row_index in 0..rows {
+            for col_index in 0..cols {
+                new_cells[row_index * new_cols + col_index] =
+                    std::mem::take(&mut self.cells[row_index * old_cols + col_index]);
+            }
+        }
+
+        self.cells = new_cells;
+        self.rows = new_rows;
+        self.cols = new_cols;
     }
 
 }
