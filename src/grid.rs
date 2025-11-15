@@ -61,14 +61,7 @@ impl Grid {
     {
         let mut iter = cells.into_iter();
         for cell in self.cells.iter_mut() {
-            if let Some(new_cell) = iter.next() {
-                *cell = new_cell;
-            } else {
-                break;
-            }
-        }
-        if self.cells.len() < self.rows * self.cols {
-            self.cells.resize(self.rows * self.cols, Cell::default());
+            *cell = iter.next().unwrap_or_default();
         }
     }
 
@@ -134,9 +127,10 @@ impl Grid {
             // This will return an empty iterator
             self.rows * self.cols
         };
+        let step = self.cols.max(1);
         self.cells.iter()
             .skip(col_index)
-            .step_by(self.cols)
+            .step_by(step)
     }
 
     pub fn row_iter_mut(
@@ -168,9 +162,10 @@ impl Grid {
             // This will return an empty iterator
             self.rows * self.cols
         };
+        let step = self.cols.max(1);
         self.cells.iter_mut()
             .skip(col_index)
-            .step_by(self.cols)
+            .step_by(step)
     }
 
     pub fn flat_iter(
@@ -404,7 +399,7 @@ impl Display for Grid {
         let mid_border = Border::render_mid_border(&col_widths);
         let bot_border = Border::render_bot_border(&col_widths);
 
-        writeln!(f, "{}", top_border)?;
+        writeln!(f, "{}", &top_border)?;
         for row_index in 0..self.rows {
             let mut lines = Vec::with_capacity(self.cols);
             for col_index in 0..self.cols {
@@ -423,10 +418,10 @@ impl Display for Grid {
                 writeln!(f, "{}", row_str)?;
             }
             if row_index < self.rows - 1 {
-                writeln!(f, "{}", mid_border.clone())?;
+                writeln!(f, "{}", &mid_border)?;
             }
         }
-        writeln!(f, "{}", bot_border)?;
+        writeln!(f, "{}", &bot_border)?;
         Ok(())
     }
     

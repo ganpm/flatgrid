@@ -1,14 +1,21 @@
 use crate::ansi::*;
 
-pub const BOLD     : &str = "bold";
-pub const DIM      : &str = "dim";
-pub const ITALIC   : &str = "italic";
-pub const UNDERLINE: &str = "underline";
-pub const BLINK    : &str = "blink";
-pub const REVERSE  : &str = "reverse";
-pub const HIDDEN   : &str = "hidden";
-pub const STRIKE   : &str = "strike";
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Style;
+
+impl Style {
+
+    pub const BOLD     : &'static str = "bold";
+    pub const DIM      : &'static str = "dim";
+    pub const ITALIC   : &'static str = "italic";
+    pub const UNDERLINE: &'static str = "underline";
+    pub const BLINK    : &'static str = "blink";
+    pub const REVERSE  : &'static str = "reverse";
+    pub const HIDDEN   : &'static str = "hidden";
+    pub const STRIKE   : &'static str = "strike";
+
+}
 
 /// A bitfield flag structure for managing multiple font styles simultaneously.
 /// 
@@ -17,7 +24,7 @@ pub const STRIKE   : &str = "strike";
 /// Each bit in the flag byte represents a different font style.
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub struct FontStyleFlag {
+pub(crate) struct FontStyleFlag {
     flag: u8,
 }
 
@@ -103,7 +110,7 @@ impl IntoIterator for FontStyleFlag {
 /// 
 /// This iterator allows you to iterate over the individual font styles that are currently set in a `FontStyleFlag` instance.
 
-pub struct FontStyleFlagIter {
+pub(crate) struct FontStyleFlagIter {
     flag: u8,
     index: usize,
 }
@@ -131,7 +138,7 @@ impl Iterator for FontStyleFlagIter {
 /// can be combined using the `FontStyleFlag` structure for multiple effects.
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum FontStyle {
+pub(crate) enum FontStyle {
     Bold,
     Dim,
     Italic,
@@ -150,7 +157,7 @@ impl FontStyle {
     /// 
     /// A `u8` value representing the bit flag for this style.
 
-    pub fn flag(
+    pub fn as_flag(
         &self,
     ) -> u8
     {
@@ -199,14 +206,14 @@ impl FontStyle {
     ) -> Option<Self>
     {
         match style {
-            BOLD      => Some(Self::Bold),
-            DIM       => Some(Self::Dim),
-            ITALIC    => Some(Self::Italic),
-            UNDERLINE => Some(Self::Underline),
-            BLINK     => Some(Self::Blink),
-            REVERSE   => Some(Self::Reverse),
-            HIDDEN    => Some(Self::Hidden),
-            STRIKE    => Some(Self::Strike),
+            Style::BOLD      => Some(Self::Bold),
+            Style::DIM       => Some(Self::Dim),
+            Style::ITALIC    => Some(Self::Italic),
+            Style::UNDERLINE => Some(Self::Underline),
+            Style::BLINK     => Some(Self::Blink),
+            Style::REVERSE   => Some(Self::Reverse),
+            Style::HIDDEN    => Some(Self::Hidden),
+            Style::STRIKE    => Some(Self::Strike),
             _         => None,
         }
     }

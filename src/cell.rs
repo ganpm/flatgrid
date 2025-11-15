@@ -1,5 +1,5 @@
-use crate::align::{HAlign, VAlign, Align};
-use crate::color::Color;
+use crate::align::{AlignH, AlignV, Align};
+use crate::color::{Foreground, Background};
 use crate::style::{FontStyle, FontStyleFlag};
 use crate::format::apply_ansi_formatting;
 
@@ -9,10 +9,10 @@ use std::fmt::Display;
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Cell {
     data: String,
-    h_align: Option<HAlign>,
-    v_align: Option<VAlign>,
-    fg_color: Option<Color>,
-    bg_color: Option<Color>,
+    h_align: Option<AlignH>,
+    v_align: Option<AlignV>,
+    fg_color: Option<Foreground>,
+    bg_color: Option<Background>,
     font_style: FontStyleFlag,
     width: Option<usize>,
     height: Option<usize>,
@@ -95,14 +95,14 @@ impl Cell {
         align: &str,
     )
     {
-        match Align::from_str(align) {
-            Some(Align::HAlign(h_align)) => {
-                self.h_align = Some(h_align);
-            },
-            Some(Align::VAlign(v_align)) => {
-                self.v_align = Some(v_align);
-            },
-            None => {},
+        match align {
+            Align::TOP     => self.v_align = Some(AlignV::Top),
+            Align::BOTTOM  => self.v_align = Some(AlignV::Bottom),
+            Align::MIDDLE  => self.v_align = Some(AlignV::Middle),
+            Align::LEFT    => self.h_align = Some(AlignH::Left),
+            Align::RIGHT   => self.h_align = Some(AlignH::Right),
+            Align::CENTER  => self.h_align = Some(AlignH::Center),
+            _              => {/* Ignore unrecognized alignments */},
         }
     }
 
@@ -111,7 +111,7 @@ impl Cell {
         color: &str,
     )
     {
-        self.fg_color = Color::from_str(color);
+        self.fg_color = Foreground::from_str(color);
     }
 
     pub fn set_highlight(
@@ -119,7 +119,7 @@ impl Cell {
         color: &str,
     )
     {
-        self.bg_color = Color::from_str(color);
+        self.bg_color = Background::from_str(color);
     }
 
     pub fn set_style(
@@ -128,7 +128,7 @@ impl Cell {
     )
     {
         if let Some(style) = FontStyle::from_str(style) {
-            self.font_style.set(style.flag());
+            self.font_style.set(style.as_flag());
         }
     }
 
@@ -157,6 +157,7 @@ impl Cell {
         let height = self.data.lines().count();
     
         let v_align = self.v_align.unwrap_or_default();
+        let h_align = self.h_align.unwrap_or_default();
 
         let pad_count = target_cell_height.saturating_sub(height);
         let pad_string = " ".repeat(target_cell_width);
@@ -166,11 +167,11 @@ impl Cell {
 
         // Add top padding
         match v_align {
-            VAlign::Top => {},
-            VAlign::Bottom => {
+            AlignV::Top => {},
+            AlignV::Bottom => {
                 lines.extend(std::iter::repeat(pad_string.clone()).take(pad_count));
             },
-            VAlign::Middle => {
+            AlignV::Middle => {
                 lines.extend(std::iter::repeat(pad_string.clone()).take(pad_count / 2));
             },
         }
@@ -178,45 +179,37 @@ impl Cell {
         // Add content lines
         for line in data_lines {
             let visible_len = visible_lens.next().unwrap_or(0);
-            let formatted_line = if visible_len < target_cell_width {
-                let width = target_cell_width + line.len() - visible_len;
-
-                // Apply horizontal alignment
-                let h_align = self.h_align.unwrap_or_default();
-                match h_align {
-                    HAlign::Left   => format!("{:<width$}", line, width = width),
-                    HAlign::Right  => format!("{:>width$}", line, width = width),
-                    HAlign::Center => format!("{:^width$}", line, width = width),
+            lines.push(
+                if visible_len < target_cell_width {
+                    // Apply horizontal alignment
+                    let width = target_cell_width + line.len() - visible_len;
+                    match h_align {
+                        AlignH::Left   => format!("{:<width$}", line, width = width),
+                        AlignH::Right  => format!("{:>width$}", line, width = width),
+                        AlignH::Center => format!("{:^width$}", line, width = width),
+                    }
+                } else if visible_len == target_cell_width {
+                    line
+                } else {
+                    // Truncate the line to fit the target width
+                    line[..target_cell_width].to_string()
                 }
-            } else if visible_len == target_cell_width {
-                line
-            } else {
-                // Truncate the line to fit the target width
-                let truncated = &line[..target_cell_width];
-                let h_align = self.h_align.unwrap_or_default();
-                match h_align {
-                    HAlign::Left   => format!("{:<width$}", truncated, width = target_cell_width),
-                    HAlign::Right  => format!("{:>width$}", truncated, width = target_cell_width),
-                    HAlign::Center => format!("{:^width$}", truncated, width = target_cell_width),
-                }
-            };
-            lines.push(formatted_line);
+            );
         }
 
         // Add bottom padding
         match v_align {
-            VAlign::Top => {
+            AlignV::Top => {
                 lines.extend(std::iter::repeat(pad_string).take(pad_count));
             },
-            VAlign::Bottom => {},
-            VAlign::Middle => {
+            AlignV::Bottom => {},
+            AlignV::Middle => {
                 lines.extend(std::iter::repeat(pad_string).take(pad_count - pad_count / 2));
             },
         }
 
         lines
     }
-
 
 }
 

@@ -1,13 +1,19 @@
-const TOP   : &str = "top";
-const BOTTOM: &str = "bottom";
-const MIDDLE: &str = "middle";
-const LEFT  : &str = "left";
-const RIGHT : &str = "right";
-const CENTER: &str = "center";
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Align;
+
+impl Align {
+    pub const TOP    : &'static str = "top";
+    pub const BOTTOM : &'static str = "bottom";
+    pub const MIDDLE : &'static str = "middle";
+    pub const LEFT   : &'static str = "left";
+    pub const RIGHT  : &'static str = "right";
+    pub const CENTER : &'static str = "center";
+}
 
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum VAlign {
+pub(crate) enum AlignV {
     #[default]
     Top,
     Bottom,
@@ -15,33 +21,9 @@ pub enum VAlign {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum HAlign {
+pub(crate) enum AlignH {
     #[default]
     Left,
     Right,
     Center,
-}
-
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Align {
-    VAlign(VAlign),
-    HAlign(HAlign),
-}
-
-
-impl Align {
-
-    pub fn from_str(align: &str) -> Option<Self> {
-        match align {
-            TOP    => Some(Self::VAlign(VAlign::Top)),
-            BOTTOM => Some(Self::VAlign(VAlign::Bottom)),
-            MIDDLE => Some(Self::VAlign(VAlign::Middle)),
-            LEFT   => Some(Self::HAlign(HAlign::Left)),
-            RIGHT  => Some(Self::HAlign(HAlign::Right)),
-            CENTER => Some(Self::HAlign(HAlign::Center)),
-            _      => None,
-        }
-    }
-
 }

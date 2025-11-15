@@ -11,6 +11,9 @@ mod format;
 
 pub use cell::Cell;
 pub use grid::Grid;
+pub use align::Align;
+pub use color::Color;
+pub use style::Style;
 
 
 #[macro_export]
@@ -21,7 +24,7 @@ macro_rules! grid {
     ($data:expr) => {
         $crate::Grid::from($data)
     };
-    ($width:expr, $height:expr) => {
-        $crate::Grid::new($width, $height)
+    ($rows:expr, $cols:expr) => {
+        $crate::Grid::new($rows, $cols)
     };
 }
