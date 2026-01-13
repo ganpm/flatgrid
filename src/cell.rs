@@ -37,16 +37,24 @@ impl Cell {
         }
     }
 
+    pub fn set_data(
+        &mut self,
+        new_data: String
+    )
+    {
+        self.data = new_data;
+    }
+
     pub fn get_data(
         &self
-    ) -> &String
+    ) -> &str
     {
         &self.data
     }
 
     pub fn get_data_mut(
         &mut self
-    ) -> &mut String
+    ) -> &mut str
     {
         &mut self.data
     }
@@ -63,10 +71,10 @@ impl Cell {
 
     pub fn set_height(
         &mut self,
-        height: usize
+        new_height: usize
     )
     {
-        self.height = Some(height);
+        self.height = Some(new_height);
     }
 
     pub(crate) fn width(
@@ -84,18 +92,18 @@ impl Cell {
 
     pub fn set_width(
         &mut self,
-        width: usize
+        new_width: usize
     )
     {
-        self.width = Some(width);
+        self.width = Some(new_width);
     }
 
     pub fn set_align(
         &mut self,
-        align: &str,
+        new_align: &str,
     )
     {
-        match align {
+        match new_align {
             Align::TOP     => self.v_align = Some(AlignV::Top),
             Align::BOTTOM  => self.v_align = Some(AlignV::Bottom),
             Align::MIDDLE  => self.v_align = Some(AlignV::Middle),
@@ -108,26 +116,26 @@ impl Cell {
 
     pub fn set_color(
         &mut self,
-        color: &str,
+        new_color: &str,
     )
     {
-        self.fg_color = Foreground::from_str(color);
+        self.fg_color = Foreground::from_str(new_color);
     }
 
     pub fn set_highlight(
         &mut self,
-        color: &str,
+        new_color: &str,
     )
     {
-        self.bg_color = Background::from_str(color);
+        self.bg_color = Background::from_str(new_color);
     }
 
     pub fn set_style(
         &mut self,
-        style: &str,
+        new_style: &str,
     )
     {
-        if let Some(style) = FontStyle::from_str(style) {
+        if let Some(style) = FontStyle::from_str(new_style) {
             self.font_style.set(style.as_flag());
         }
     }
