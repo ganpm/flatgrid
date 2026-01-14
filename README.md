@@ -36,13 +36,12 @@ fn main() {
 
     // Align the header row.
     for cell in grid.row_iter_mut(0) {
-        cell.set_align(Align::CENTER);
-        cell.set_align(Align::MIDDLE);
+        cell.set_align(Align::Center | Align::Middle);
     }
 
     // Right-align the Age column.
     for cell in grid.col_iter_mut(1) {
-        cell.set_align(Align::RIGHT);
+        cell.set_align(Align::Right);
     }
 
     // Can print directly since Grid implements Display
