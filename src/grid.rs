@@ -1,9 +1,11 @@
 use crate::cell::Cell;
 use crate::border::Border;
+use crate::error::{GridError, ErrorMessage};
 
 use std::fmt::{Display, Formatter, Error};
 use std::collections::{VecDeque};
 
+/// A 2D grid of cells stored in a flat vector in row-major order.
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Grid {
@@ -15,6 +17,10 @@ pub struct Grid {
 
 impl Grid {
 
+    /// Create a new grid with the specified number of rows and columns.
+    /// 
+    /// All cells will be initialized to the default cell.
+
     pub fn new(
         row_size: usize,
         col_size: usize,
@@ -24,13 +30,19 @@ impl Grid {
         Grid { cells, col_size, row_size }
     }
 
-    pub fn from<T, U, V>(
-        data: T,
+    /// Create a new grid from a 2D iterator.
+    /// 
+    /// The outer iterator represents rows, and the inner iterator represents columns.
+    /// 
+    /// If the rows have different lengths, the missing cells will be filled with default cells.
+    /// 
+    /// The number of columns will be determined by the longest row.
+    /// 
+    /// The number of rows will be determined by the number of rows in the outer iterator.
+
+    pub fn from(
+        data: impl IntoIterator<Item = impl IntoIterator<Item = impl Into<Cell>>>,
     ) -> Self
-    where
-        T: IntoIterator<Item = U>,
-        U: IntoIterator<Item = V>,
-        V: Into<Cell>,
     {
         let cells_2d: Vec<Vec<Cell>> = data
             .into_iter()
@@ -52,33 +64,78 @@ impl Grid {
         Grid { cells, col_size, row_size }
     }
 
-    pub fn set_cells<T>(
+    /// Set the entire grid's cells from an iterator.
+    /// 
+    /// If the iterator has fewer items than the grid size,
+    /// the remaining cells will be filled with the default cell.
+    /// 
+    /// If the iterator has more items than the grid size,
+    /// the extra items will be ignored.
+
+    pub fn set_cells(
         &mut self,
-        cells: T,
+        new_cells: impl IntoIterator<Item = impl Into<Cell>>,
     )
-    where
-        T: IntoIterator<Item = Cell>,
     {
-        let mut iter = cells.into_iter();
+        let mut new_cells_iter = new_cells.into_iter();
         for cell in self.cells.iter_mut() {
-            *cell = iter.next().unwrap_or_default();
+            *cell = new_cells_iter
+                .next()
+                .map(Into::into)
+                .unwrap_or_default();
         }
     }
 
-    pub fn set_cell<T>(
+    /// Set the cell at the specified row and column indices.
+    /// 
+    /// Panics if the indices are out of bounds.
+
+    pub fn set_cell(
         &mut self,
         row_index: usize,
         col_index: usize,
-        cell_data: T,
+        cell_data: impl Into<Cell>,
     )
-    where
-        T: Into<Cell>,
     {
-        if row_index >= self.row_size || col_index >= self.col_size {
-            panic!("Row or column index out of bounds");
+        if row_index >= self.row_size && col_index >= self.col_size {
+            panic!("{}", ErrorMessage::ROW_AND_COL_INDEX_OUT_OF_BOUNDS);
+        }
+        if row_index >= self.row_size {
+            panic!("{}", ErrorMessage::ROW_INDEX_OUT_OF_BOUNDS);
+        }
+        if col_index >= self.col_size {
+            panic!("{}", ErrorMessage::COL_INDEX_OUT_OF_BOUNDS);
         }
         self.cells[row_index * self.col_size + col_index] = cell_data.into();
     }
+
+    /// Try to set the cell at the specified row and column indices.
+    /// 
+    /// Returns an error if the indices are out of bounds.
+
+    pub fn try_set_cell(
+        &mut self,
+        row_index: usize,
+        col_index: usize,
+        cell_data: impl Into<Cell>,
+    ) -> Result<(), GridError>
+    {
+        if row_index >= self.row_size && col_index >= self.col_size {
+            return Err(GridError::RowAndColIndexOutOfBounds);
+        }
+        if row_index >= self.row_size {
+            return Err(GridError::RowIndexOutOfBounds);
+        }
+        if col_index >= self.col_size {
+            return Err(GridError::ColIndexOutOfBounds);
+        }
+        self.cells[row_index * self.col_size + col_index] = cell_data.into();
+        Ok(())
+    }
+
+    /// Get an immutable reference to the cell at the specified row and column indices.
+    /// 
+    /// Returns None if the indices are out of bounds.
 
     pub fn get_cell(
         &self,
@@ -89,6 +146,10 @@ impl Grid {
         self.cells.get(row_index * self.col_size + col_index)
     }
 
+    /// Get a mutable reference to the cell at the specified row and column indices.
+    /// 
+    /// Returns None if the indices are out of bounds.
+
     pub fn get_cell_mut(
         &mut self,
         row_index: usize,
@@ -97,6 +158,10 @@ impl Grid {
     {
         self.cells.get_mut(row_index * self.col_size + col_index)
     }
+
+    /// Get an immutable iterator over the cells in the specified row.
+    /// 
+    /// If the row index is out of bounds, returns an empty iterator.
 
     pub fn row_iter(
         &self,
@@ -114,6 +179,10 @@ impl Grid {
             .skip(row_index * self.col_size)
             .take(self.col_size)
     }
+
+    /// Get an immutable iterator over the cells in the specified column.
+    /// 
+    /// If the column index is out of bounds, returns an empty iterator.
 
     pub fn col_iter(
         &self,
@@ -133,6 +202,10 @@ impl Grid {
             .step_by(step)
     }
 
+    /// Get a mutable iterator over the cells in the specified row.
+    /// 
+    /// If the row index is out of bounds, returns an empty iterator.
+
     pub fn row_iter_mut(
         &mut self,
         row_index: usize
@@ -149,6 +222,10 @@ impl Grid {
             .skip(row_index * self.col_size)
             .take(self.col_size)
     }
+
+    /// Get a mutable iterator over the cells in the specified column.
+    /// 
+    /// If the column index is out of bounds, returns an empty iterator.
 
     pub fn col_iter_mut(
         &mut self,
@@ -168,12 +245,20 @@ impl Grid {
             .step_by(step)
     }
 
+    /// Get an immutable iterator over all cells in the grid.
+    /// 
+    /// The cells are returned in row-major order.
+
     pub fn flat_iter(
         &self
     ) -> impl Iterator<Item = &Cell>
     {
         self.cells.iter()
     }
+
+    /// Get a mutable iterator over all cells in the grid.
+    /// 
+    /// The cells are returned in row-major order.
 
     pub fn flat_iter_mut(
         &mut self
@@ -182,30 +267,36 @@ impl Grid {
         self.cells.iter_mut()
     }
 
-    pub fn insert_col<T>(
+    /// Insert a new column at the specified column index.
+    /// Existing columns to the right of the inserted column will be shifted
+    /// in place to the right.
+    /// 
+    /// Panics if the column index is out of bounds.
+    /// 
+    /// If the new column has fewer cells than the number of rows in the grid,
+    /// the remaining cells will be filled with the default cell.
+    /// 
+    /// If the new column has more cells than the number of rows in the grid,
+    /// the excess cells will be truncated.
+
+    pub fn insert_col(
         &mut self,
         col_index: usize,
-        new_column: impl IntoIterator<Item = T>,
+        new_column: impl IntoIterator<Item = impl Into<Cell>>,
     )
-    where
-        T: Into<Cell>,
     {
-        if col_index > self.col_size {
-            panic!("Column index out of bounds");
+        if col_index >= self.col_size {
+            panic!("{}", ErrorMessage::COL_INDEX_OUT_OF_BOUNDS);
         }
 
         let mut new_column: Vec<Cell> = new_column.into_iter().map(Into::into).collect();
 
-        if new_column.len() < self.row_size {
-            panic!("New column has fewer cells than the number of rows in the grid");
-        }
-        if new_column.len() > self.row_size {
-            panic!("New column has more cells than the number of rows in the grid");
-        }
+        // Fill or truncate the new column to match the number of rows
+        new_column.resize(self.row_size, Cell::default());
 
-        let old_cols = self.col_size;
-        let new_cols = self.col_size + 1;
-        let new_size = self.row_size * new_cols;
+        let old_col_size = self.col_size;
+        let new_col_size = self.col_size + 1;
+        let new_size = self.row_size * new_col_size;
 
         // Resize the existing cells to make room for the new column
         self.cells.resize(new_size, Cell::default());
@@ -213,10 +304,10 @@ impl Grid {
         for ri in (0..self.row_size).rev() {
             // Iterator for the previous column indices
             let mut cols_iter = (0..self.col_size).rev();
-            for ci in (0..new_cols).rev() {
+            for ci in (0..new_col_size).rev() {
                 if ci == col_index {
                     // Insert the new cell
-                    self.cells[ri * new_cols + ci] = new_column.pop().unwrap_or_default();
+                    self.cells[ri * new_col_size + ci] = new_column.pop().unwrap_or_default();
                     if new_column.is_empty() {
                         // We can break early here because
                         // its guaranteed that the rest of the cells in the
@@ -228,47 +319,78 @@ impl Grid {
                     // Only move the iterator when we're not inserting
                     let old_ci = cols_iter.next().unwrap();
                     // Move the cells from the old index to the new index
-                    self.cells[ri * new_cols + ci] =
-                        std::mem::take(&mut self.cells[ri * old_cols + old_ci]);
+                    self.cells[ri * new_col_size + ci] =
+                        std::mem::take(&mut self.cells[ri * old_col_size + old_ci]);
                 }
             }
         }
 
-        self.col_size = new_cols;
+        self.col_size = new_col_size;
     }
 
-    pub fn insert_row<T>(
+
+    /// Try to insert a new column at the specified column index.
+    /// Existing columns to the right of the inserted column will be shifted
+    /// in place to the right.
+    /// 
+    /// Returns an error if the column index is out of bounds.
+    /// 
+    /// If the new column has fewer cells than the number of rows in the grid,
+    /// the remaining cells will be filled with the default cell.
+    /// 
+    /// If the new column has more cells than the number of rows in the grid,
+    /// the excess cells will be truncated.
+
+    pub fn try_insert_col(
+        &mut self,
+        col_index: usize,
+        new_column: impl IntoIterator<Item = impl Into<Cell>>,
+    ) -> Result<(), GridError>
+    {
+        if col_index > self.col_size {
+            return Err(GridError::ColIndexOutOfBounds);
+        }
+
+        Ok(self.insert_col(col_index, new_column))
+    }
+
+    /// Insert a new row at the specified row index.
+    /// Existing rows below the inserted row will be shifted in place downwards.
+    /// 
+    /// Panics if the row index is out of bounds.
+    /// 
+    /// If the new row has fewer cells than the number of columns in the grid,
+    /// the remaining cells will be filled with the default cell.
+    /// 
+    /// If the new row has more cells than the number of columns in the grid,
+    /// the excess cells will be truncated.
+
+    pub fn insert_row(
         &mut self,
         row_index: usize,
-        new_row: impl IntoIterator<Item = T>,
+        new_row: impl IntoIterator<Item = impl Into<Cell>>,
     )
-    where
-        T: Into<Cell>,
     {
         if row_index > self.row_size {
-            panic!("Row index out of bounds");
+            panic!("{}", ErrorMessage::ROW_INDEX_OUT_OF_BOUNDS);
         }
 
         let mut new_row: Vec<Cell> = new_row.into_iter().map(Into::into).collect();
 
-        if new_row.len() < self.col_size {
-            panic!("New row has fewer cells than the number of columns in the grid");
-        }
-        if new_row.len() > self.col_size {
-            panic!("New row has more cells than the number of columns in the grid");
-        }
+        // Fill or truncate the new row to match the number of columns
+        new_row.resize(self.col_size, Cell::default());
 
-        let old_rows = self.row_size;
-        let new_rows = self.row_size + 1;
-        let new_size = new_rows * self.col_size;
+        let old_row_size = self.row_size;
+        let new_row_size = self.row_size + 1;
+        let new_size = new_row_size * self.col_size;
 
         // Resize the existing cells to make room for the new row
         self.cells.resize(new_size, Cell::default());
 
         for ci in (0..self.col_size).rev() {
             // Iterator for the previous row indices
-            let mut rows_iter = (0..old_rows).rev();
-            for ri in (0..new_rows).rev() {
+            let mut rows_iter = (0..old_row_size).rev();
+            for ri in (0..new_row_size).rev() {
                 if ri == row_index {
                     // Insert the new cell
                     self.cells[ri * self.col_size + ci] = new_row.pop().unwrap_or_default();
@@ -289,54 +411,145 @@ impl Grid {
             }
         }
 
-        self.row_size = new_rows;
+        self.row_size = new_row_size;
     }
 
-    pub fn set_col<T>(
-        &mut self,
-        col_index: usize,
-        new_column: impl IntoIterator<Item = T>,
-    )
-    where
-        T: Into<Cell>,
-    {
-        if col_index >= self.col_size {
-            panic!("Column index out of bounds");
-        }
+    /// Try to insert a new row at the specified row index.
+    /// Existing rows below the inserted row will be shifted in place downwards.
+    /// 
+    /// Returns an error if the row index is out of bounds.
+    /// 
+    /// If the new row has fewer cells than the number of columns in the grid,
+    /// the remaining cells will be filled with the default cell.
+    /// 
+    /// If the new row has more cells than the number of columns in the grid,
+    /// the excess cells will be truncated.
 
-        let new_column: Vec<Cell> = new_column.into_iter().map(Into::into).collect();
-
-        if new_column.len() != self.row_size {
-            panic!("New column has a different number of cells than the number of rows in the grid");
-        }
-
-        for (row_index, cell) in new_column.into_iter().enumerate() {
-            self.cells[row_index * self.col_size + col_index] = cell;
-        }
-    }
-
-    pub fn set_row<T>(
+    pub fn try_insert_row(
         &mut self,
         row_index: usize,
-        new_row: impl IntoIterator<Item = T>,
-    )
-    where
-        T: Into<Cell>,
+        new_row: impl IntoIterator<Item = impl Into<Cell>>,
+    ) -> Result<(), GridError>
     {
-        if row_index >= self.row_size {
-            panic!("Row index out of bounds");
+        if row_index > self.row_size {
+            return Err(GridError::RowIndexOutOfBounds);
         }
 
-        let new_row: Vec<Cell> = new_row.into_iter().map(Into::into).collect();
+        Ok(self.insert_row(row_index, new_row))
+    }
 
-        if new_row.len() != self.col_size {
-            panic!("New row has a different number of cells than the number of columns in the grid");
+    /// Set the entire column at the specified index.
+    /// 
+    /// Panics if the index is out of bounds.
+    /// 
+    /// If the new column has fewer cells than the number of rows in the grid,
+    /// the remaining cells will be filled with the default cell.
+    /// 
+    /// If the new column has more cells than the number of rows in the grid,
+    /// the excess cells will be truncated.
+
+    pub fn set_col(
+        &mut self,
+        col_index: usize,
+        new_column: impl IntoIterator<Item = impl Into<Cell>>,
+    )
+    {
+        if col_index >= self.col_size {
+            panic!("{}", ErrorMessage::COL_INDEX_OUT_OF_BOUNDS);
         }
 
-        for (col_index, cell) in new_row.into_iter().enumerate() {
-            self.cells[row_index * self.col_size + col_index] = cell;
+        let mut new_column_iter = new_column.into_iter();
+
+        for cell in self.col_iter_mut(col_index) {
+            *cell = new_column_iter
+                .next()
+                .map(Into::into)
+                .unwrap_or_default();
         }
     }
+
+    /// Try to set the entire column at the specified index.
+    /// 
+    /// Returns an error if the index is out of bounds.
+    /// 
+    /// If the new column has fewer cells than the number of rows in the grid,
+    /// the remaining cells will be filled with the default cell.
+    /// 
+    /// If the new column has more cells than the number of rows in the grid,
+    /// the excess cells will be truncated.
+
+    pub fn try_set_col(
+        &mut self,
+        col_index: usize,
+        new_column: impl IntoIterator<Item = impl Into<Cell>>,
+    ) -> Result<(), GridError>
+    {
+        if col_index >= self.col_size {
+            return Err(GridError::ColIndexOutOfBounds);
+        }
+
+        Ok(self.set_col(col_index, new_column))
+    }
+
+    /// Set the entire row at the specified index.
+    /// Panics if the index is out of bounds.
+    /// 
+    /// If the new row has fewer cells than the number of columns in the grid,
+    /// the remaining cells will be filled with the default cell.
+    /// 
+    /// If the new row has more cells than the number of columns in the grid,
+    /// the excess cells will be truncated.
+
+    pub fn set_row(
+        &mut self,
+        row_index: usize,
+        new_row: impl IntoIterator<Item = impl Into<Cell>>,
+    )
+    {
+        if row_index >= self.row_size {
+            panic!("{}", ErrorMessage::ROW_INDEX_OUT_OF_BOUNDS);
+        }
+
+        let mut new_row_iter = new_row.into_iter();
+
+        for cell in self.row_iter_mut(row_index) {
+            *cell = new_row_iter
+                .next()
+                .map(Into::into)
+                .unwrap_or_default();
+        }
+    }
+
+    /// Try to set the entire row at the specified index.
+    /// 
+    /// Returns an error if the index is out of bounds.
+    /// 
+    /// If the new row has fewer cells than the number of columns in the grid,
+    /// the remaining cells will be filled with the default cell.
+    /// 
+    /// If the new row has more cells than the number of columns in the grid,
+    /// the excess cells will be truncated.
+    
+    pub fn try_set_row(
+        &mut self,
+        row_index: usize,
+        new_row: impl IntoIterator<Item = impl Into<Cell>>,
+    ) -> Result<(), GridError>
+    {
+        if row_index >= self.row_size {
+            return Err(GridError::RowIndexOutOfBounds);
+        }
+
+        Ok(self.set_row(row_index, new_row))
+    }
+
+    /// Resize the grid to the specified number of rows and columns.
+    /// 
+    /// If the new size is larger than the current size, the empty space will be
+    /// filled with the default cell.
+    /// 
+    /// If the new size is smaller than the current size, excess cells will be
+    /// discarded.
 
     pub fn resize(
         &mut self,
@@ -344,24 +557,37 @@ impl Grid {
         new_col_size: usize,
     )
     {
-        let old_rows = self.row_size;
-        let old_cols = self.col_size;
+        let old_row_size = self.row_size;
+        let old_col_size = self.col_size;
 
         let mut new_cells = vec![Cell::default(); new_row_size * new_col_size];
 
-        let rows = std::cmp::min(old_rows, new_row_size);
-        let cols = std::cmp::min(old_cols, new_col_size);
+        let rows = std::cmp::min(old_row_size, new_row_size);
+        let cols = std::cmp::min(old_col_size, new_col_size);
 
         for row_index in 0..rows {
             for col_index in 0..cols {
                 new_cells[row_index * new_col_size + col_index] =
-                    std::mem::take(&mut self.cells[row_index * old_cols + col_index]);
+                    std::mem::take(&mut self.cells[row_index * old_col_size + col_index]);
             }
         }
 
         self.cells = new_cells;
         self.row_size = new_row_size;
         self.col_size = new_col_size;
+    }
+
+    /// Removes all cells from the grid.
+    /// 
+    /// The grid will have zero rows and zero columns after this operation.
+
+    pub fn clear(
+        &mut self
+    )
+    {
+        self.cells.clear();
+        self.row_size = 0;
+        self.col_size = 0;
     }
 
 }
