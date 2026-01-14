@@ -2,9 +2,9 @@ use crate::ansi::*;
 
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Style;
+pub struct StyleString;
 
-impl Style {
+impl StyleString {
 
     pub const BOLD     : &'static str = "bold";
     pub const DIM      : &'static str = "dim";
@@ -206,15 +206,15 @@ impl FontStyle {
     ) -> Option<Self>
     {
         match style {
-            Style::BOLD      => Some(Self::Bold),
-            Style::DIM       => Some(Self::Dim),
-            Style::ITALIC    => Some(Self::Italic),
-            Style::UNDERLINE => Some(Self::Underline),
-            Style::BLINK     => Some(Self::Blink),
-            Style::REVERSE   => Some(Self::Reverse),
-            Style::HIDDEN    => Some(Self::Hidden),
-            Style::STRIKE    => Some(Self::Strike),
-            _         => None,
+            StyleString::BOLD      => Some(Self::Bold),
+            StyleString::DIM       => Some(Self::Dim),
+            StyleString::ITALIC    => Some(Self::Italic),
+            StyleString::UNDERLINE => Some(Self::Underline),
+            StyleString::BLINK     => Some(Self::Blink),
+            StyleString::REVERSE   => Some(Self::Reverse),
+            StyleString::HIDDEN    => Some(Self::Hidden),
+            StyleString::STRIKE    => Some(Self::Strike),
+            _                      => None,
         }
     }
 

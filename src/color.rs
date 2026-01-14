@@ -1,5 +1,7 @@
 use crate::ansi::*;
 
+/// Represents standard colors for foreground and background styling.
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Color;
 

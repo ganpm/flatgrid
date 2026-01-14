@@ -8,12 +8,13 @@ mod ansi;
 mod color;
 mod style;
 mod format;
+mod error;
 
 pub use cell::Cell;
 pub use grid::Grid;
 pub use align::Align;
 pub use color::Color;
-pub use style::Style;
+pub use style::StyleString;
 
 
 #[macro_export]
