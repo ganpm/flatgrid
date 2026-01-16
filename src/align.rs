@@ -1,4 +1,4 @@
-use std::ops::{BitOr, BitOrAssign, BitAnd};
+use std::ops::{BitOr, BitOrAssign};
 
 /// Alignment options for cell content.
 /// 
@@ -13,7 +13,6 @@ pub struct Align(u8);
 #[allow(non_upper_case_globals)]
 impl Align {
 
-    pub const None   : Align = Align(0);
     pub const Top    : Align = Align(1 << 0);
     pub const Bottom : Align = Align(1 << 1);
     pub const Middle : Align = Align(1 << 2);
@@ -70,20 +69,6 @@ impl BitOrAssign for Align {
 
     fn bitor_assign(&mut self, rhs: Align) {
         *self = *self | rhs;
-    }
-
-}
-
-impl BitAnd for Align {
-
-    type Output = Align;
-
-    fn bitand(
-        self,
-        rhs: Align
-    ) -> Align
-    {
-        Align(self.0 & rhs.0)
     }
 
 }
