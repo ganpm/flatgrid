@@ -1,6 +1,6 @@
 use crate::ansi::RESET_ANSI_CODE;
 use crate::color::{Foreground, Background};
-use crate::style::FontStyleFlag;
+use crate::fontstyle::FontStyle;
 
 /// Applies color and style formatting to text using ANSI escape codes.
 /// 
@@ -22,7 +22,7 @@ pub fn apply_ansi_formatting(
     text: &str,
     fg_color: Option<Foreground>,
     bg_color: Option<Background>,
-    style_flags: FontStyleFlag,
+    style_flags: FontStyle,
 ) -> String
 {
     let mut formatted_text = String::new();

@@ -1,6 +1,6 @@
-use crate::align::{AlignH, AlignV, Align, AlignString};
+use crate::align::{AlignH, AlignV, Align};
 use crate::color::{Foreground, Background};
-use crate::style::{FontStyle, FontStyleFlag};
+use crate::fontstyle::FontStyle;
 use crate::format::apply_ansi_formatting;
 
 use std::fmt::Display;
@@ -17,7 +17,7 @@ pub struct Cell {
     v_align: Option<AlignV>,
     fg_color: Option<Foreground>,
     bg_color: Option<Background>,
-    font_style: FontStyleFlag,
+    font_style: FontStyle,
     width: Option<usize>,
     height: Option<usize>,
 }
@@ -39,7 +39,7 @@ impl Cell {
             v_align: None,
             fg_color: None,
             bg_color: None,
-            font_style: FontStyleFlag::new(),
+            font_style: FontStyle::new(),
             width: None,
             height: None,
         }
@@ -144,30 +144,6 @@ impl Cell {
 
     /// Sets the alignment of the cell's content.
     /// 
-    /// The `new_align` parameter should be one of the following strings:
-    /// - "top", "bottom", "middle" for vertical alignment
-    /// - "left", "right", "center" for horizontal alignment
-    /// 
-    /// Unrecognized alignment strings will be ignored.
-
-    pub fn set_align_from(
-        &mut self,
-        new_align: &str,
-    )
-    {
-        match new_align {
-            AlignString::TOP     => self.v_align = Some(AlignV::Top),
-            AlignString::BOTTOM  => self.v_align = Some(AlignV::Bottom),
-            AlignString::MIDDLE  => self.v_align = Some(AlignV::Middle),
-            AlignString::LEFT    => self.h_align = Some(AlignH::Left),
-            AlignString::RIGHT   => self.h_align = Some(AlignH::Right),
-            AlignString::CENTER  => self.h_align = Some(AlignH::Center),
-            _              => {/* Ignore unrecognized alignments */},
-        }
-    }
-
-    /// Sets the alignment of the cell's content.
-    /// 
     /// The `new_align` parameter should be an `Align` value
     /// combining horizontal and vertical alignment options using bitwise OR.
     /// 
@@ -213,21 +189,17 @@ impl Cell {
         self.bg_color = Background::from_str(new_color);
     }
 
-    /// Sets the font style of the cell's text.
-    ///
-    /// The `new_style` parameter should be a valid style string
-    /// that can be parsed by the `FontStyle::from_str` method.
+    /// Sets the font style(s) for the cell's text.
     /// 
-    /// Unrecognized style strings will result in no style being set.
+    /// The `style` parameter should be a `FontStyle` value
+    /// combining one or more font styles using bitwise OR.
 
-    pub fn set_style_from(
+    pub fn set_style(
         &mut self,
-        new_style: &str,
+        style: FontStyle,
     )
     {
-        if let Some(style) = FontStyle::from_str(new_style) {
-            self.font_style.set(style.as_flag());
-        }
+        self.font_style = style;
     }
 
     /// Removes all formatting from the cell, resetting it to default state.
@@ -242,7 +214,7 @@ impl Cell {
         self.v_align = None;
         self.fg_color = None;
         self.bg_color = None;
-        self.font_style.reset();
+        self.font_style = FontStyle::new();
     }
 
     pub(crate) fn render_lines(

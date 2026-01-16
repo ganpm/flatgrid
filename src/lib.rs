@@ -6,15 +6,15 @@ mod align;
 mod border;
 mod ansi;
 mod color;
-mod style;
 mod format;
 mod error;
+mod fontstyle;
 
 pub use cell::Cell;
 pub use grid::Grid;
 pub use align::Align;
 pub use color::Color;
-pub use style::StyleString;
+pub use fontstyle::FontStyle;
 
 
 #[macro_export]
