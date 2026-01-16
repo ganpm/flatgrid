@@ -20,7 +20,7 @@
 The following example is the primary use case for this library.
 
 ```rust
-use flatgrid::{Align, Grid};
+use flatgrid::*;
 
 fn main() {
     // Uneven rows are allowed: missing cells are filled with defaults.
@@ -34,17 +34,19 @@ fn main() {
 
     let mut grid = Grid::from(data);
 
-    // Align the header row.
-    for cell in grid.row_iter_mut(0) {
-        cell.set_align(Align::Center | Align::Middle);
-    }
-
-    // Right-align the Age column.
+    // Format the Age column.
     for cell in grid.col_iter_mut(1) {
-        cell.set_align(Align::Right);
+        cell.set_width(5); // Set width
+        cell.set_align(Align::Right);  // Right-align
     }
 
-    // Can print directly since Grid implements Display
+    // Format the top row.
+    for cell in grid.row_iter_mut(0) {
+        cell.set_height(3);  // Set height
+        cell.set_align(Align::Center | Align::Middle);  // Center middle align
+    }
+
+    // Print
     println!("{}", grid);
 }
 ```
@@ -52,53 +54,84 @@ fn main() {
 Example output:
 
 ```
- ┌──────────┬─────┬─────────────┬──────────┐ 
- │   Name   │ Age │    City     │ Nickname │ 
- ├──────────┼─────┼─────────────┼──────────┤ 
- │ Ms.      │  26 │ New York    │ Allie    │ 
- │ Alice    │     │             │          │ 
- │ Smith    │     │             │          │ 
- ├──────────┼─────┼─────────────┼──────────┤ 
- │ Mr.      │  27 │ Los Angeles │          │ 
- │ Bob      │     │             │          │ 
- │ Johnson  │     │             │          │ 
- ├──────────┼─────┼─────────────┼──────────┤ 
- │ Mr.      │  35 │ Chicago     │          │ 
- │ Charlie  │     │             │          │ 
- │ Williams │     │             │          │ 
- └──────────┴─────┴─────────────┴──────────┘ 
+ ┌──────────┬───────┬─────────────┬──────────┐
+ │          │       │             │          │
+ │   Name   │  Age  │    City     │ Nickname │
+ │          │       │             │          │
+ ├──────────┼───────┼─────────────┼──────────┤
+ │ Ms.      │    26 │ New York    │ Allie    │
+ │ Alice    │       │             │          │
+ │ Smith    │       │             │          │
+ ├──────────┼───────┼─────────────┼──────────┤
+ │ Mr.      │    27 │ Los Angeles │          │
+ │ Bob      │       │             │          │
+ │ Johnson  │       │             │          │
+ ├──────────┼───────┼─────────────┼──────────┤
+ │ Mr.      │    35 │ Chicago     │          │
+ │ Charlie  │       │             │          │
+ │ Williams │       │             │          │
+ └──────────┴───────┴─────────────┴──────────┘
 ```
 
-## Styling cells (ANSI)
+## Formatting Cells
 
 Each cell can be formatted independently:
 
+- `Cell::set_align(new_align)` sets vertical and horizontal alignment
 - `Cell::set_color(new_color)` sets foreground color
 - `Cell::set_highlight(new_color)` sets background color
 - `Cell::set_style(new_style)` applies styles like bold/underline
+- `Cell::set_height(new_height)`/`Cell::set_width(new_width)` when set, ignores automatic height calculation and truncates/pads the cell to the new size
 
-Use the exported constants to avoid typos:
-
-- Colors: `flatgrid::Color::{RED, GREEN, BRIGHT_YELLOW, ...}`
-- Styles: `flatgrid::Style::{BOLD, UNDERLINE, ITALIC, ...}`
-
+Example:
 ```rust
-use flatgrid::{Color, Grid, Style};
+use flatgrid::*;
 
 fn main() {
-    let mut g = Grid::from([["status", "message"], ["ok", "all good"]]);
+    let data = vec![
+        vec!["User", "Status"],
+        vec!["Alice", "Online"],
+        vec!["Bob", "Offline"],
+        vec!["Charlie", "Away"],
+        vec!["Diana", "Busy"],
+    ];
 
-    // Make the header bold.
-    for cell in g.row_iter_mut(0) {
-        cell.set_style(Style::BOLD);
+    let mut grid = Grid::from(data);
+
+    // Set header row to bold and center-aligned
+    for cell in grid.row_iter_mut(0) {
+        cell.set_style(FontStyle::Bold);
+        cell.set_align(Align::Center);
     }
 
-    // Color the status.
-    if let Some(cell) = g.get_cell_mut(1, 0) {
+    // Set different styles and colors for each user's status
+
+    // Online - Green Bold
+    grid.get_cell_mut(1, 1).map(|cell| {
+        cell.set_style(FontStyle::Bold);
         cell.set_color(Color::GREEN);
-    }
+    });
 
-    println!("{}", g);
+    // Offline - Red Bold
+    grid.get_cell_mut(2, 1).map(|cell| {
+        cell.set_style(FontStyle::Bold);
+        cell.set_color(Color::RED);
+    });
+
+    // Away - Yellow Italic
+    grid.get_cell_mut(3, 1).map(|cell| {
+        cell.set_style(FontStyle::Italic);
+        cell.set_color(Color::YELLOW);
+    });
+
+    // Busy - Magenta Underline
+    grid.get_cell_mut(4, 1).map(|cell| {
+        cell.set_style(FontStyle::Underline);
+        cell.set_color(Color::MAGENTA);
+    });
+
+    // Print
+    println!("{}", grid);
 }
 ```
 
@@ -108,14 +141,14 @@ Notes:
 - Your terminal must support ANSI (Windows Terminal / modern PowerShell do).
 - Invalid colors and codes will be ignored and will have no effect on the output format.
 
-## Working with the grid
+## Overview
 
 ### Construction
 
 - `Grid::new(row_size, col_size)` creates a fixed-size grid of default cells
 - `Grid::from(data)` accepts any nested iterator of values convertible into `Cell` (any data type can be converted into a `Cell` if it also implements `Display`)
 
-`flatgrid` also exports a small convenience macro:
+`flatgrid` also exports a small convenience macro `grid!()`:
 
 ```rust
 use flatgrid::{grid, Grid};
@@ -125,20 +158,48 @@ let from_data = grid!([["a", "b"], ["c", "d"]]);
 let sized = grid!(3, 4);
 ```
 
-### Iteration
+### Accessing Cells
 
-- `row_iter(row_index)` / `row_iter_mut(row_index)`
-- `col_iter(col_index)` / `col_iter_mut(col_index)`
-- `flat_iter()` / `flat_iter_mut()`
+- `Grid::get_cell(row_index, col_index)`
+- `Grid::get_cell_mut(row_index, col_index)`
 
-Out-of-bounds `row_iter*` / `col_iter*` return empty iterators.
+Out-of-bounds indices return `None`
+
+### Accessing Rows and Columns
+
+- `Grid::row_iter(row_index)`
+- `Grid::row_iter_mut(row_index)`
+- `Grid::col_iter(col_index)`
+- `Grid::col_iter_mut(col_index)`
+
+Out-of-bounds indices will return empty iterators.
+
+### Accessing All Cells
+
+- `Grid::flat_iter()`
+- `Grid::flat_iter_mut()`
+
+The flattened iterators are in row-major order.
 
 ### Mutation
 
-- `set_cell(row_index, col_index, value)` (panics if out of bounds)
-- `set_row(row_index, values)` / `set_col(col_index, values)` (panics if length mismatches)
-- `insert_row(row_index, values)` / `insert_col(col_index, values)` (panics if length mismatches)
-- `resize(new_rows, new_cols)` preserves the top-left overlap and drops the rest if the new size is smaller than the previous and pads with the default if the new size is larger
+- `set_cell(row_index, col_index, cell_data)`
+- `set_row(row_index, new_row)`
+- `set_col(col_index, new_column)`
+- `insert_row(row_index, new_row)` (in-place shift)
+- `insert_col(col_index, new_column)` (in-place shift)
+- `set_cells(new_cells)`
+- `resize(new_rows, new_cols)` (preserves the top-left overlap)
+
+Panics if indices are out of bounds. For multi-cell mutators, mismatched input dimensions are truncated or padded with empty cells to fit grid dimensions.
+
+The following variants of the above functions return `Result` instead of panicking.
+
+- `try_set_cell(row_index, col_index, cell_data)`
+- `try_set_row(row_index, new_row)`
+- `try_set_col(col_index, new_column)`
+- `try_insert_row(row_index, new_row)`
+- `try_insert_col(col_index, new_column)`
 
 ## Limitations
 
