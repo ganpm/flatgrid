@@ -215,6 +215,8 @@ impl Cell {
         self.fg_color = None;
         self.bg_color = None;
         self.font_style = FontStyle::new();
+        self.width = None;
+        self.height = None;
     }
 
     pub(crate) fn render_lines(
